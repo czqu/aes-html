@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AES Encryption/Decryption</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        input[type="text"], input[type="password"] {
+            width: 300px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        textarea {
+            width: 300px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+<h1>Encryption/Decryption</h1>
+<label for="password">Password:</label><br>
+<input type="password" id="password" placeholder="Enter password (optional) "><br>
+
+<label for="plaintext">Plaintext:</label><br>
+<textarea id="plaintext" placeholder="Enter plaintext" rows="5" cols="40"></textarea><br><br>
+
+<label for="ciphertext">Ciphertext:</label><br>
+<textarea id="ciphertext" placeholder="Enter ciphertext" rows="5" cols="40"></textarea><br>
+
+<script>
+    // Get references to the input fields
+    const passwordInput = document.getElementById('password');
+    const plaintextInput = document.getElementById('plaintext');
+    const ciphertextInput = document.getElementById('ciphertext');
+
+    async function getKey(password) {
+        const enc = new TextEncoder();
+        const keyMaterial = await window.crypto.subtle.importKey(
+            'raw',
+            enc.encode(password),
+            { name: 'PBKDF2' },
+            false,
+            ['deriveKey']
+        );
+        return window.crypto.subtle.deriveKey(
+            {
+                name: 'PBKDF2',
+                salt: enc.encode('some-salt'), // Static salt for simplicity, consider using a random salt in production
+                iterations: 100000,
+                hash: 'SHA-256'
+            },
+            keyMaterial,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['encrypt', 'decrypt']
+        );
+    }
+
+    async function encrypt(plaintext, password) {
+        const key = await getKey(password);
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const enc = new TextEncoder();
+        const encrypted = await window.crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv: iv },
+            key,
+            enc.encode(plaintext)
+        );
+        const ciphertextArray = new Uint8Array(encrypted);
+        const combined = new Uint8Array(iv.length + ciphertextArray.length);
+        combined.set(iv);
+        combined.set(ciphertextArray, iv.length);
+        return btoa(String.fromCharCode.apply(null, combined));
+    }
+
+    async function decrypt(ciphertext, password) {
+        const key = await getKey(password);
+        const combined = new Uint8Array(atob(ciphertext).split('').map(c => c.charCodeAt(0)));
+        const iv = combined.slice(0, 12);
+        const data = combined.slice(12);
+        try {
+            const decrypted = await window.crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: iv },
+                key,
+                data
+            );
+            const dec = new TextDecoder();
+            return dec.decode(decrypted);
+        } catch (e) {
+            console.error('Decryption error:', e); // Log errors for debugging
+            return 'Decryption failed';
+        }
+    }
+
+    plaintextInput.addEventListener('input', async () => {
+        const plaintext = plaintextInput.value;
+        let password = passwordInput.value;
+        if (password === "") {
+            password = "abcd"; // Default password
+        }
+        if (plaintext && password) {
+            try {
+                const encrypted = await encrypt(plaintext, password);
+                ciphertextInput.value = encrypted;
+            } catch (e) {
+                console.error('Encryption error:', e); // Log errors for debugging
+            }
+        } else {
+            ciphertextInput.value = '';
+        }
+    });
+
+    ciphertextInput.addEventListener('input', async () => {
+        const ciphertext = ciphertextInput.value;
+        let password = passwordInput.value;
+        if (password === "") {
+            password = "abcd"; // Default password
+        }
+        if (ciphertext && password) {
+            try {
+                const decrypted = await decrypt(ciphertext, password);
+                plaintextInput.value = decrypted;
+            } catch (e) {
+                console.error('Decryption error:', e); // Log errors for debugging
+                plaintextInput.value = 'Decryption failed';
+            }
+        } else {
+            plaintextInput.value = '';
+        }
+    });
+</script>
+</body>
+</html>
