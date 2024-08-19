@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,14 +25,11 @@
 <body>
 <h1>Encryption/Decryption</h1>
 <label for="password">Password:</label><br>
-<input type="password" id="password" placeholder="Enter password (optional) "><br>
-
+<textarea id="password" placeholder="Enter password (optional) " rows="5" cols="40"></textarea><br><br>
 <label for="plaintext">Plaintext:</label><br>
 <textarea id="plaintext" placeholder="Enter plaintext" rows="5" cols="40"></textarea><br><br>
-
 <label for="ciphertext">Ciphertext:</label><br>
 <textarea id="ciphertext" placeholder="Enter ciphertext" rows="5" cols="40"></textarea><br>
-
 <script>
     // Get references to the input fields
     const passwordInput = document.getElementById('password');
@@ -132,6 +130,7 @@
             plaintextInput.value = '';
         }
     });
+ 
 </script>
 </body>
 </html>
